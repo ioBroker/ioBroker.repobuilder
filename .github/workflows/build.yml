@@ -1,0 +1,35 @@
+name: Build ioBroker repository
+
+on:
+  schedule:
+    - cron: "59 1,13 * * *"
+
+jobs:
+  build:
+    name: Build ioBroker repository
+
+    runs-on: ubuntu-latest
+    concurrency:
+      group: build
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - run: npm i
+      - run: npm run build
+        env:
+          VAR_ACTIONS_AWS_REGION: ${{ secrets.VAR_ACTIONS_AWS_REGION }}
+          VAR_ACTIONS_AWS_ACCESS_KEY_ID: ${{ secrets.VAR_ACTIONS_AWS_ACCESS_KEY_ID }}
+          VAR_ACTIONS_AWS_SECRET_ACCESS_KEY: ${{ secrets.VAR_ACTIONS_AWS_SECRET_ACCESS_KEY }}
+          VAR_ACTIONS_USAGE_STATISTICS_URL: ${{ secrets.VAR_ACTIONS_USAGE_STATISTICS_URL }}
+          VAR_ACTIONS_GENERATE_MAP_URL: ${{ secrets.VAR_ACTIONS_GENERATE_MAP_URL }}
+          VAR_ACTIONS_FORUM_STATISTICS_URL: ${{ secrets.VAR_ACTIONS_FORUM_STATISTICS_URL }}
+          VAR_ACTIONS_SFPT_HOST: ${{ secrets.VAR_ACTIONS_SFPT_HOST }}
+          VAR_ACTIONS_SFPT_PORT: ${{ secrets.VAR_ACTIONS_SFPT_PORT }}
+          VAR_ACTIONS_SFTP_USERNAME: ${{ secrets.VAR_ACTIONS_SFTP_USERNAME }}
+          VAR_ACTIONS_SFTP_PASSWORD: ${{ secrets.VAR_ACTIONS_SFTP_PASSWORD }}
+          VAR_ACTIONS_EMAIL: ${{ secrets.VAR_ACTIONS_EMAIL }}
+          VAR_ACTIONS_SOURCE_EMAIL: ${{ secrets.VAR_ACTIONS_SOURCE_EMAIL }}
+          VAR_ACTIONS_REPLY_EMAIL: ${{ secrets.VAR_ACTIONS_REPLY_EMAIL }}
