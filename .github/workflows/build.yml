@@ -3,6 +3,16 @@ name: Build ioBroker repository
 on:
   schedule:
     - cron: "59 1,13 * * *"
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: 'Log level'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - false
+          - true
 
 jobs:
   build:
@@ -20,6 +30,7 @@ jobs:
       - run: npm i
       - run: npm run build
         env:
+          DEBUG: ${{ inputs.logLevel }}
           VAR_ACTIONS_AWS_REGION: ${{ secrets.VAR_ACTIONS_AWS_REGION }}
           VAR_ACTIONS_AWS_ACCESS_KEY_ID: ${{ secrets.VAR_ACTIONS_AWS_ACCESS_KEY_ID }}
           VAR_ACTIONS_AWS_SECRET_ACCESS_KEY: ${{ secrets.VAR_ACTIONS_AWS_SECRET_ACCESS_KEY }}
