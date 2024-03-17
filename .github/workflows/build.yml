@@ -19,6 +19,7 @@ jobs:
     name: Build ioBroker repository
 
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     concurrency:
       group: build
       cancel-in-progress: true
