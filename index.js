@@ -362,7 +362,7 @@ async function post(req) {
             latest = sortRepo(latest);
             const MAX_STEPS = 19;
 
-            console.log(`STEP 1 of ${MAX_STEPS}: readGithubStats`);
+            console.log(`------------ STEP 1 of ${MAX_STEPS}: readGithubStats --------------------`);
             // take GitHub statistics from current repo. Because of the rate limit, we can read only 10 adapters per session.
             actualLatest && Object.keys(latest).forEach(adapter => {
                 if (!actualLatest[adapter]) {
@@ -380,26 +380,26 @@ async function post(req) {
             });
             await readGithubStats(latest);
 
-            console.log(`STEP 2 of ${MAX_STEPS}: readNpmStats`);
+            console.log(`------------ STEP 2 of ${MAX_STEPS}: readNpmStats --------------------`);
             await readNpmStats(latest);
 
-            console.log(`STEP 3 of ${MAX_STEPS}: readInstallStatistics`);
+            console.log(`------------ STEP 3 of ${MAX_STEPS}: readInstallStatistics --------------------`);
             const stat = await readInstallStatistics(latest);
 
-            console.log(`STEP 4 of ${MAX_STEPS}: getLatestRepositoryFile`);
+            console.log(`------------ STEP 4 of ${MAX_STEPS}: getLatestRepositoryFile --------------------`);
             try {
                 latest = await getLatestRepositoryFile(latest, '');
             } catch (e) {
                 console.error(`Cannot get latest repository file: ${e}`);
             }
 
-            console.log(`STEP 5 of ${MAX_STEPS}: getStableRepositoryFile`);
+            console.log(`------------ STEP 5 of ${MAX_STEPS}: getStableRepositoryFile --------------------`);
             try {
                 stable = await getStableRepositoryFile(stable, '');
             } catch (e) {
                 console.error(`Cannot get stable repository file: ${e}`);
             }
-            console.log(`STEP 6 of ${MAX_STEPS}: updatePublishes`);
+            console.log(`------------ STEP 6 of ${MAX_STEPS}: updatePublishes --------------------`);
             await updatePublishes(latest, stable);
 
             // combine latest and stable repos
@@ -505,7 +505,7 @@ async function post(req) {
             const hashNews = getHash(jsonNews);
             const date = new Date().toISOString();
 
-            console.log(`STEP 7 of ${MAX_STEPS}: uploadOneFile '/repo/sources-dist-latest.json'`);
+            console.log(`------------ STEP 7 of ${MAX_STEPS}: uploadOneFile '/repo/sources-dist-latest.json' --------------------`);
             // write the latest file on server
             await uploadOneFile('/repo/sources-dist-latest.json', jsonLatest, hashes);
             // write the latest file hash on server
@@ -516,11 +516,11 @@ async function post(req) {
             });
             DEBUG && console.log(jsonHashLatest);
 
-            console.log(`STEP 8 of ${MAX_STEPS}: uploadOneFile '/repo/sources-dist-latest-hash.json'`);
+            console.log(`------------ STEP 8 of ${MAX_STEPS}: uploadOneFile '/repo/sources-dist-latest-hash.json' --------------------`);
             await uploadOneFile('/repo/sources-dist-latest-hash.json', jsonHashLatest, hashes);
 
             // write stable file on server
-            console.log(`STEP 9 of ${MAX_STEPS}: uploadOneFile '/repo/sources-dist.json'`);
+            console.log(`------------ STEP 9 of ${MAX_STEPS}: uploadOneFile '/repo/sources-dist.json' --------------------`);
             await uploadOneFile('/repo/sources-dist.json', jsonStable, hashes);
 
             // write stable file hash on server
@@ -530,14 +530,14 @@ async function post(req) {
                 name: 'sources-dist.json'
             });
             DEBUG && console.log(jsonHashStable);
-            console.log(`STEP 10 of ${MAX_STEPS}: uploadOneFile '/repo/sources-dist-hash.json'`);
+            console.log(`------------ STEP 10 of ${MAX_STEPS}: uploadOneFile '/repo/sources-dist-hash.json' --------------------`);
             await uploadOneFile('/repo/sources-dist-hash.json', jsonHashStable, hashes);
 
             // write news file on server
-            console.log(`STEP 11 of ${MAX_STEPS}: uploadOneFile '/repo/news.json'`);
+            console.log(`------------ STEP 11 of ${MAX_STEPS}: uploadOneFile '/repo/news.json' --------------------`);
             await uploadOneFile('/repo/news.json', jsonNews, hashes)
 
-            console.log(`STEP 12 of ${MAX_STEPS}: uploadOneFile '/repo/news-hash.json'`);
+            console.log(`------------ STEP 12 of ${MAX_STEPS}: uploadOneFile '/repo/news-hash.json' --------------------`);
             // write news file hash on server
             const jsonHashNews = JSON.stringify({
                 hash: hashNews,
@@ -547,25 +547,25 @@ async function post(req) {
             DEBUG && console.log(jsonHashNews);
             await uploadOneFile('/repo/news-hash.json', jsonHashNews, hashes);
 
-            console.log(`STEP 13 of ${MAX_STEPS}: generateStableBadges`);
+            console.log(`------------ STEP 13 of ${MAX_STEPS}: generateStableBadges --------------------`);
             await generateStableBadges(stable, latest, hashes);
 
-            console.log(`STEP 14 of ${MAX_STEPS}: generateCountBadges`);
+            console.log(`------------ STEP 14 of ${MAX_STEPS}: generateCountBadges --------------------`);
             await generateCountBadges(hashes, stat);
 
-            console.log(`STEP 15 of ${MAX_STEPS}: generateMap`);
+            console.log(`------------ STEP 15 of ${MAX_STEPS}: generateMap --------------------`);
             await generateMap();
 
-            console.log(`STEP 16 of ${MAX_STEPS}: generateForumStats`);
+            console.log(`------------ STEP 16 of ${MAX_STEPS}: generateForumStats --------------------`);
             await generateForumStats();
 
-            console.log(`STEP 17 of ${MAX_STEPS}: writeHashesToS3`);
+            console.log(`------------ STEP 17 of ${MAX_STEPS}: writeHashesToS3 --------------------`);
             await writeHashesToS3(hashes)
 
-            console.log(`STEP 18 of ${MAX_STEPS}: writeReposToS3`);
+            console.log(`------------ STEP 18 of ${MAX_STEPS}: writeReposToS3 --------------------`);
             await writeReposToS3('', stable);
 
-            console.log(`STEP 19 of ${MAX_STEPS}: finish!`);
+            console.log(`------------ STEP 19 of ${MAX_STEPS}: finish! --------------------`);
 
             return {
                 statusCode: 200,
