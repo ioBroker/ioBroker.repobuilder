@@ -505,6 +505,13 @@ async function post(req) {
             const hashNews = getHash(jsonNews);
             const date = new Date().toISOString();
 
+            // read recommended versions
+            const versions = await axios('https://raw.githubusercontent.com/ioBroker/ioBroker/master/versions.json');
+            if (versions && versions.data) {
+                latest._repoInfo.recommededVersions = versions.data;
+                stable._repoInfo.recommededVersions = versions.data;
+            }
+
             console.log(`------------ STEP 7 of ${MAX_STEPS}: uploadOneFile '/repo/sources-dist-latest.json' --------------------`);
             // write the latest file on server
             await uploadOneFile('/repo/sources-dist-latest.json', jsonLatest, hashes);
