@@ -508,8 +508,8 @@ async function post(req) {
             // read recommended versions
             const versions = await axios('https://raw.githubusercontent.com/ioBroker/ioBroker/master/versions.json');
             if (versions && versions.data) {
-                latest._repoInfo.recommededVersions = versions.data;
-                stable._repoInfo.recommededVersions = versions.data;
+                latest._repoInfo.recommendedVersions = versions.data;
+                stable._repoInfo.recommendedVersions = versions.data;
             }
 
             console.log(`------------ STEP 7 of ${MAX_STEPS}: uploadOneFile '/repo/sources-dist-latest.json' --------------------`);
