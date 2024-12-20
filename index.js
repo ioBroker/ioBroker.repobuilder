@@ -32,12 +32,10 @@ function findPath(path, url) {
     if (!url) {
         return '';
     }
-    if (url.substring(0, 'http://'.length) === 'http://' ||
-        url.substring(0, 'https://'.length) === 'https://') {
+    if (url.substring(0, 'http://'.length) === 'http://' || url.substring(0, 'https://'.length) === 'https://') {
         return url;
     } else {
-        if (path.substring(0, 'http://'.length) === 'http://' ||
-            path.substring(0, 'https://'.length) === 'https://') {
+        if (path.substring(0, 'http://'.length) === 'http://' || path.substring(0, 'https://'.length) === 'https://') {
             return (path + url).replace(/\/\//g, '/').replace('http:/', 'http://').replace('https:/', 'https://');
         } else {
             if (url && url[0] === '/') {
@@ -84,14 +82,19 @@ async function readInstallStatistics(sources) {
     try {
         const response = await axios(config.usageStatisticsURL, {
             timeout: 15000,
-            validateStatus: status => status < 400
-        })
+            validateStatus: status => status < 400,
+        });
         const body = response.data;
-        body && body.adapters && Object.keys(body.adapters).forEach(adapter =>
-            sources[adapter] && (sources[adapter].stat = body.adapters[adapter]));
+        body &&
+            body.adapters &&
+            Object.keys(body.adapters).forEach(
+                adapter => sources[adapter] && (sources[adapter].stat = body.adapters[adapter]),
+            );
         return body;
     } catch (error) {
-        console.warn(`Cannot readInstallStatistics: ${error.response ? error.response.data : (error.message || error.code)}`);
+        console.warn(
+            `Cannot readInstallStatistics: ${error.response ? error.response.data : error.message || error.code}`,
+        );
         return null;
     }
 }
@@ -201,18 +204,41 @@ async function getStableRepositoryFile(sources, path, callback) {
             let changed = !last[name] || !last[name].name;
             if (changed) {
                 console.log(`Update info for ${name} because new`);
-            } else if (last[name] && sources[name] && last[name].url && last[name].url !== findPath(path, sources[name].url)) {
-                console.log(`Update info for ${name} because URL changed from ${last[name].url} to ${findPath(path, sources[name].url)}`);
+            } else if (
+                last[name] &&
+                sources[name] &&
+                last[name].url &&
+                last[name].url !== findPath(path, sources[name].url)
+            ) {
+                console.log(
+                    `Update info for ${name} because URL changed from ${last[name].url} to ${findPath(path, sources[name].url)}`,
+                );
                 changed = true;
-            } else if (last[name] && sources[name] && last[name].meta && last[name].meta !== findPath(path, sources[name].meta)) {
-                console.log(`Update info for ${name} because META changed from ${last[name].meta} to ${findPath(path, sources[name].meta)}`);
+            } else if (
+                last[name] &&
+                sources[name] &&
+                last[name].meta &&
+                last[name].meta !== findPath(path, sources[name].meta)
+            ) {
+                console.log(
+                    `Update info for ${name} because META changed from ${last[name].meta} to ${findPath(path, sources[name].meta)}`,
+                );
                 changed = true;
-            } else if (last[name] && sources[name] && last[name].icon && last[name].icon !== findPath(path, sources[name].icon)) {
-                console.log(`Update info for ${name} because ICON changed from ${last[name].icon} to ${findPath(path, sources[name].icon)}`);
+            } else if (
+                last[name] &&
+                sources[name] &&
+                last[name].icon &&
+                last[name].icon !== findPath(path, sources[name].icon)
+            ) {
+                console.log(
+                    `Update info for ${name} because ICON changed from ${last[name].icon} to ${findPath(path, sources[name].icon)}`,
+                );
                 changed = true;
             } else if (last[name] && sources[name] && last[name].version !== sources[name].version) {
                 // if a version was changed
-                console.log(`Update info for ${name} because VERSION changed from ${last[name].version} to ${sources[name].version}`);
+                console.log(
+                    `Update info for ${name} because VERSION changed from ${last[name].version} to ${sources[name].version}`,
+                );
                 changed = true;
             }
             if (changed) {
@@ -308,13 +334,13 @@ function cutHistory(adapter, name) {
         versions.splice(MAX_HISTORY_LENGTH, oldLen - MAX_HISTORY_LENGTH);
         const obj = adapter.news;
         adapter.news = {};
-        versions.forEach(v => adapter.news[v] = obj[v]);
+        versions.forEach(v => (adapter.news[v] = obj[v]));
         console.warn(`News for REPO ${adapter.name} were cut from ${oldLen} to ${Object.keys(versions).length}`);
     }
 }
 
 async function onlyNews() {
-    let hashes = await readHashesFromS3()
+    let hashes = await readHashesFromS3();
     hashes = hashes || {};
     // read news
     let jsonNews = await readUrl('https://raw.githubusercontent.com/ioBroker/ioBroker.docs/master/info/news.json');
@@ -345,14 +371,26 @@ async function post(req) {
 
     !DEBUG && console.log(JSON.stringify(req.body));
 
-    if (!body || !body.commits || body.commits.find(c => c.modified.find(file => file === 'sources-dist.json' || file === 'sources-dist-stable.json'))) {
+    if (
+        !body ||
+        !body.commits ||
+        body.commits.find(c =>
+            c.modified.find(file => file === 'sources-dist.json' || file === 'sources-dist-stable.json'),
+        )
+    ) {
         // read latest repo
         try {
-            let latest = await readUrl('https://raw.githubusercontent.com/ioBroker/ioBroker.repositories/master/sources-dist.json');
+            let latest = await readUrl(
+                'https://raw.githubusercontent.com/ioBroker/ioBroker.repositories/master/sources-dist.json',
+            );
             // read stable repo
-            let stable = await readUrl('https://raw.githubusercontent.com/ioBroker/ioBroker.repositories/master/sources-dist-stable.json');
+            let stable = await readUrl(
+                'https://raw.githubusercontent.com/ioBroker/ioBroker.repositories/master/sources-dist-stable.json',
+            );
             // read news
-            let jsonNews = await readUrl('https://raw.githubusercontent.com/ioBroker/ioBroker.docs/master/info/news.json');
+            let jsonNews = await readUrl(
+                'https://raw.githubusercontent.com/ioBroker/ioBroker.docs/master/info/news.json',
+            );
             // read actual repository to take GitHub statistics
             const actualLatest = await readUrl('https://iobroker.live/repo/sources-dist-latest.json');
             // read badges hashes
@@ -364,20 +402,21 @@ async function post(req) {
 
             console.log(`------------ STEP 1 of ${MAX_STEPS}: readGithubStats --------------------`);
             // take GitHub statistics from current repo. Because of the rate limit, we can read only 10 adapters per session.
-            actualLatest && Object.keys(latest).forEach(adapter => {
-                if (!actualLatest[adapter]) {
-                    return;
-                }
-                if (actualLatest[adapter].stars !== -1 && actualLatest[adapter].stars !== undefined) {
-                    latest[adapter].stars = actualLatest[adapter].stars;
-                }
-                if (actualLatest[adapter].issues !== undefined) {
-                    latest[adapter].issues = actualLatest[adapter].issues;
-                }
-                if (actualLatest[adapter].score !== undefined) {
-                    latest[adapter].score = actualLatest[adapter].score;
-                }
-            });
+            actualLatest &&
+                Object.keys(latest).forEach(adapter => {
+                    if (!actualLatest[adapter]) {
+                        return;
+                    }
+                    if (actualLatest[adapter].stars !== -1 && actualLatest[adapter].stars !== undefined) {
+                        latest[adapter].stars = actualLatest[adapter].stars;
+                    }
+                    if (actualLatest[adapter].issues !== undefined) {
+                        latest[adapter].issues = actualLatest[adapter].issues;
+                    }
+                    if (actualLatest[adapter].score !== undefined) {
+                        latest[adapter].score = actualLatest[adapter].score;
+                    }
+                });
             await readGithubStats(latest);
 
             console.log(`------------ STEP 2 of ${MAX_STEPS}: readNpmStats --------------------`);
@@ -465,6 +504,13 @@ async function post(req) {
                 stable.admin.repoTime = new Date().toISOString();
             }
 
+            // read recommended versions
+            const versions = await axios('https://raw.githubusercontent.com/ioBroker/ioBroker/master/versions.json');
+            if (versions && versions.data) {
+                latest._repoInfo.recommendedVersions = versions.data;
+                stable._repoInfo.recommendedVersions = versions.data;
+            }
+
             const jsonLatest = JSON.stringify(latest);
             const jsonStable = JSON.stringify(stable);
 
@@ -479,18 +525,19 @@ async function post(req) {
                     }
 
                     stable[adapter].latestVersion = latest[adapter].version;
-                    latest[adapter].stableVersion = stable[adapter].version
+                    latest[adapter].stableVersion = stable[adapter].version;
 
                     if (latest[adapter].desc) {
                         stable[adapter].desc = latest[adapter].desc;
                     }
 
                     // copy data from latest into stable, because stable encoding is broken
-                    stable[adapter].news && Object.keys(stable[adapter].news).forEach(version => {
-                        if (latest[adapter].news && latest[adapter].news[version]) {
-                            stable[adapter].news[version] = latest[adapter].news[version];
-                        }
-                    });
+                    stable[adapter].news &&
+                        Object.keys(stable[adapter].news).forEach(version => {
+                            if (latest[adapter].news && latest[adapter].news[version]) {
+                                stable[adapter].news[version] = latest[adapter].news[version];
+                            }
+                        });
 
                     if (latest[adapter].titleLang) {
                         stable[adapter].titleLang = latest[adapter].titleLang;
@@ -500,19 +547,15 @@ async function post(req) {
 
             // make news smaller and not formatted
             jsonNews = JSON.stringify(jsonNews);
-            const hashLatest = getHash(jsonLatest);
-            const hashStable = getHash(jsonStable);
             const hashNews = getHash(jsonNews);
             const date = new Date().toISOString();
 
-            // read recommended versions
-            const versions = await axios('https://raw.githubusercontent.com/ioBroker/ioBroker/master/versions.json');
-            if (versions && versions.data) {
-                latest._repoInfo.recommendedVersions = versions.data;
-                stable._repoInfo.recommendedVersions = versions.data;
-            }
+            const hashLatest = getHash(jsonLatest);
+            const hashStable = getHash(jsonStable);
 
-            console.log(`------------ STEP 7 of ${MAX_STEPS}: uploadOneFile '/repo/sources-dist-latest.json' --------------------`);
+            console.log(
+                `------------ STEP 7 of ${MAX_STEPS}: uploadOneFile '/repo/sources-dist-latest.json' --------------------`,
+            );
             // write the latest file on server
             await uploadOneFile('/repo/sources-dist-latest.json', jsonLatest, hashes);
             // write the latest file hash on server
@@ -523,33 +566,41 @@ async function post(req) {
             });
             DEBUG && console.log(jsonHashLatest);
 
-            console.log(`------------ STEP 8 of ${MAX_STEPS}: uploadOneFile '/repo/sources-dist-latest-hash.json' --------------------`);
+            console.log(
+                `------------ STEP 8 of ${MAX_STEPS}: uploadOneFile '/repo/sources-dist-latest-hash.json' --------------------`,
+            );
             await uploadOneFile('/repo/sources-dist-latest-hash.json', jsonHashLatest, hashes);
 
             // write stable file on server
-            console.log(`------------ STEP 9 of ${MAX_STEPS}: uploadOneFile '/repo/sources-dist.json' --------------------`);
+            console.log(
+                `------------ STEP 9 of ${MAX_STEPS}: uploadOneFile '/repo/sources-dist.json' --------------------`,
+            );
             await uploadOneFile('/repo/sources-dist.json', jsonStable, hashes);
 
             // write stable file hash on server
             const jsonHashStable = JSON.stringify({
                 hash: hashStable,
                 date,
-                name: 'sources-dist.json'
+                name: 'sources-dist.json',
             });
             DEBUG && console.log(jsonHashStable);
-            console.log(`------------ STEP 10 of ${MAX_STEPS}: uploadOneFile '/repo/sources-dist-hash.json' --------------------`);
+            console.log(
+                `------------ STEP 10 of ${MAX_STEPS}: uploadOneFile '/repo/sources-dist-hash.json' --------------------`,
+            );
             await uploadOneFile('/repo/sources-dist-hash.json', jsonHashStable, hashes);
 
             // write news file on server
             console.log(`------------ STEP 11 of ${MAX_STEPS}: uploadOneFile '/repo/news.json' --------------------`);
-            await uploadOneFile('/repo/news.json', jsonNews, hashes)
+            await uploadOneFile('/repo/news.json', jsonNews, hashes);
 
-            console.log(`------------ STEP 12 of ${MAX_STEPS}: uploadOneFile '/repo/news-hash.json' --------------------`);
+            console.log(
+                `------------ STEP 12 of ${MAX_STEPS}: uploadOneFile '/repo/news-hash.json' --------------------`,
+            );
             // write news file hash on server
             const jsonHashNews = JSON.stringify({
                 hash: hashNews,
                 date,
-                name: 'news.json'
+                name: 'news.json',
             });
             DEBUG && console.log(jsonHashNews);
             await uploadOneFile('/repo/news-hash.json', jsonHashNews, hashes);
@@ -567,7 +618,7 @@ async function post(req) {
             await generateForumStats();
 
             console.log(`------------ STEP 17 of ${MAX_STEPS}: writeHashesToS3 --------------------`);
-            await writeHashesToS3(hashes)
+            await writeHashesToS3(hashes);
 
             console.log(`------------ STEP 18 of ${MAX_STEPS}: writeReposToS3 --------------------`);
             await writeReposToS3('', stable);
@@ -576,13 +627,13 @@ async function post(req) {
 
             return {
                 statusCode: 200,
-                body: JSON.stringify({result: 'OK'})
+                body: JSON.stringify({ result: 'OK' }),
             };
         } catch (err) {
             console.error(`CANNOT finish repo build: ${err}`);
             return {
                 statusCode: 500,
-                body: JSON.stringify({error: err})
+                body: JSON.stringify({ error: err }),
             };
         }
     } else {
@@ -598,7 +649,7 @@ async function post(req) {
 exports.handler = post;
 
 if (FAST_TEST) {
-    post({body: '{"commits": [{"modified": ["sources-dist.json"]}]}'})
-        .then(response => console.log(JSON.stringify(response)));
+    post({ body: '{"commits": [{"modified": ["sources-dist.json"]}]}' }).then(response =>
+        console.log(JSON.stringify(response)),
+    );
 }
-
