@@ -11,8 +11,8 @@ const FAST_TEST = process.env.FAST_TEST === 'true';
 
 async function checkVersion(source: RepoAdapterObject): Promise<string | null> {
     if (
-        source.meta.substring(0, 'http://'.length) === 'http://' ||
-        source.meta.substring(0, 'https://'.length) === 'https://'
+        source.meta?.substring(0, 'http://'.length) === 'http://' ||
+        source.meta?.substring(0, 'https://'.length) === 'https://'
     ) {
         try {
             return await getNpmVersion(source.name);
@@ -25,6 +25,9 @@ async function checkVersion(source: RepoAdapterObject): Promise<string | null> {
 
 export async function getIoPack(source: RepoAdapterObject): Promise<RepoAdapterObject | null> {
     let ioPack: ioBroker.AdapterObject | undefined;
+    if (!source.meta) {
+        return null;
+    }
     try {
         ioPack = (await readUrl(source.meta)) as ioBroker.AdapterObject;
     } catch {
@@ -33,10 +36,10 @@ export async function getIoPack(source: RepoAdapterObject): Promise<RepoAdapterO
     if (!ioPack) {
         return null;
     }
-    const packUrl = source.meta.replace('io-package.json', 'package.json');
+    const packUrl = source.meta?.replace('io-package.json', 'package.json');
     let pack;
     try {
-        pack = await readUrl(packUrl);
+        pack = (await readUrl(packUrl)) as Record<string, any>;
     } catch {
         // ignore
     }
@@ -46,7 +49,7 @@ export async function getIoPack(source: RepoAdapterObject): Promise<RepoAdapterO
         throw new Error(`package.json is invalid for ${source.name}`);
     }
     // validate the io-pack file
-    if (!ioPack.common?.version || !ioPack.common.name || !ioPack.native) {
+    if (!ioPack.common?.version || !ioPack.common.name || (!ioPack.native && source.name !== 'js-controller')) {
         throw new Error(`io-package.json is invalid for ${source.name}`);
     }
 

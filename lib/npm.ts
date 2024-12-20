@@ -46,7 +46,7 @@ export async function getNpmVersion(adapter?: string): Promise<string | null> {
         if (version?.includes('-')) {
             // find first non-alfa version
             const versions = Object.keys(data.time).filter(
-                v => !v && !v.includes('-') && v !== 'created' && v !== 'modified',
+                v => v && !v.includes('-') && v !== 'created' && v !== 'modified',
             );
             versions.sort((a, b) => semver.compare(a, b));
             version = semver.valid(versions.pop() || '');
@@ -69,10 +69,14 @@ export async function readNpmStats(
         return sources;
     }
 
+    let i = 0;
+    const max = Object.keys(sources).length;
+
     for (const adapter in sources) {
         if (sources[adapter].weekDownloads === undefined && !adapter.startsWith('_')) {
             if (DEBUG) {
-                console.log(`Get npm stats for ${adapter}`);
+                i++;
+                console.log(`[${i}/${max}]Get npm stats for ${adapter}`);
             }
             try {
                 const response = await axios(`https://api.npmjs.org/downloads/point/last-week/iobroker.${adapter}`, {
@@ -122,7 +126,7 @@ export async function updatePublished(
     const time = data.time;
     let latestVersion;
     if (!data['dist-tags'] || !data['dist-tags'].latest) {
-        const versions = Object.keys(time).filter(v => v !== 'created' && v !== 'modified');
+        const versions = Object.keys(time).filter(v => v && v !== 'created' && v !== 'modified' && !v.includes('-'));
         versions.sort((a, b) => {
             if (time[a] === time[b]) {
                 return 0;
@@ -146,7 +150,7 @@ export async function updatePublished(
         latestEntry.versionDate = time[latestVersion];
         latestEntry.version = latestVersion;
     } else {
-        console.error(`Cannot find latest version for ${adapter}: ${JSON.stringify(data)}`);
+        console.error(`Cannot find latest version 1 for ${adapter}: ${JSON.stringify(data)}`);
     }
 
     if (stableEntry) {

@@ -10,17 +10,23 @@ export interface RepoInfo {
 }
 
 export interface RepoAdapterObject extends ioBroker.AdapterCommon {
+    meta: string;
+    icon: string;
+
+    $schema?: string;
     weekDownloads?: number;
     published?: string;
-    versionDate: string;
-    meta: string;
-    licenseUrl: string;
-    stars: number;
-    issues: number;
-    score: number;
-    node: string;
+    versionDate?: string;
+    licenseUrl?: string;
+    stars?: number;
+    issues?: number;
+    score?: number;
+    node?: string;
     url?: string;
     stat?: number;
+    stable?: string;
+    latestVersion?: string;
+    stableVersion?: string;
 
     /*controller?: boolean;
     node?: string;
@@ -29,8 +35,7 @@ export interface RepoAdapterObject extends ioBroker.AdapterCommon {
     allowAdapterDelete?: boolean;
     allowAdapterReadme?: boolean;
     allowAdapterRating?: boolean;
-    stable?: string;
-    latestVersion?: string;*/
+    */
 }
 
 export interface NpmVersion {
@@ -107,6 +112,13 @@ export interface NpmInfo {
     readme: string;
     readmeFilename: string;
     users: Record<string, boolean>;
+}
+
+export interface StoredRepoAdapterObject {
+    meta: string;
+    icon: string;
+    type: string;
+    version?: string;
 }
 
 export interface IoBrokerStatistics {
