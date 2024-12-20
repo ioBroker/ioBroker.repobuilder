@@ -20,7 +20,7 @@ const config = require('./config.js');
 
 const getHash = require('./lib/hash');
 const { uploadOneFile } = require('./lib/sftp');
-const readUrl = require('./lib/readUrl');
+const { readUrl } = require('./lib/readUrl');
 const { readNpmStats, updatePublished, readNpmIoPack } = require('./lib/npm');
 const { getIoPack, readGithubStats } = require('./lib/github');
 const { generateStableBadges, generateCountBadges } = require('./lib/badges');
