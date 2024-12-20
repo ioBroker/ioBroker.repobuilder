@@ -13,11 +13,6 @@ ______                  ______       _ _     _
 'use strict';
 
 const axios = require('axios');
-const FAST_TEST = process.env.FAST_TEST === 'true' || process.env.FAST_TEST === true;
-const DEBUG = process.env.DEBUG === 'true' || process.env.DEBUG === true;
-const MAX_HISTORY_LENGTH = 7;
-const { config } = require('./config');
-
 const { getHash } = require('./lib/hash');
 const { uploadOneFile } = require('./lib/sftp');
 const { readUrl } = require('./lib/readUrl');
@@ -27,6 +22,11 @@ const { generateStableBadges, generateCountBadges } = require('./lib/badges');
 const { generateForumStats, generateMap } = require('./lib/triggerIotServer');
 const { readHashesFromS3, writeHashesToS3 } = require('./lib/hashes');
 const { readReposFromS3, writeReposToS3 } = require('./lib/repos');
+const { config } = require('./config');
+
+const FAST_TEST = process.env.FAST_TEST === 'true';
+const DEBUG = process.env.DEBUG === 'true';
+const MAX_HISTORY_LENGTH = 7;
 
 function findPath(path, url) {
     if (!url) {
