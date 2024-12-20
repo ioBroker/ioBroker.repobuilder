@@ -120,7 +120,9 @@ function getLatestRepositoryFile(sources, path) {
                 sources[name].icon = findPath(path, sources[name].icon);
             }
             if (timeout && sources[name].meta) {
-                DEBUG && console.log(`Read io-package for "${name}"...`);
+                if (DEBUG) {
+                    console.log(`Read io-package for "${name}"...`);
+                }
                 sources[name].name = name;
                 // read data from GitHub
                 try {
@@ -227,7 +229,9 @@ async function getStableRepositoryFile(sources, path) {
                 changed = true;
             }
             if (changed) {
-                DEBUG && console.log(`Read io-package from npm for "${name}"...`);
+                if (DEBUG) {
+                    console.log(`Read io-package from npm for "${name}"...`);
+                }
                 // read data from GitHub
                 try {
                     const data = await (0, npm_1.readNpmIoPack)(name, sources[name].version);
@@ -459,16 +463,18 @@ async function post(req) {
                     }
                 }
             }
+            const lKeys = Object.keys(latest);
             // cut the latest history and extract license information
-            Object.keys(latest).forEach(a => {
+            for (let l = 0; l < lKeys.length; l++) {
+                const a = lKeys[l];
                 if (a.startsWith('_')) {
-                    return;
+                    continue;
                 }
-                cutHistory(latest[a], a);
+                await cutHistory(latest[a], a);
                 if (stable[a]) {
                     latest[a].stable = stable[a].version;
                 }
-            });
+            }
             const repoInfo = latest._repoInfo || {};
             // set repository build time
             repoInfo.repoTime = new Date().toISOString();
@@ -536,7 +542,9 @@ async function post(req) {
                 date,
                 name: 'sources-dist-latest.json',
             });
-            DEBUG && console.log(jsonHashLatest);
+            if (DEBUG) {
+                console.log(jsonHashLatest);
+            }
             console.log(`------------ STEP 8 of ${MAX_STEPS}: uploadOneFile '/repo/sources-dist-latest-hash.json' --------------------`);
             await (0, sftp_1.uploadOneFile)('/repo/sources-dist-latest-hash.json', jsonHashLatest, hashes);
             // write stable file on server
@@ -548,7 +556,9 @@ async function post(req) {
                 date,
                 name: 'sources-dist.json',
             });
-            DEBUG && console.log(jsonHashStable);
+            if (DEBUG) {
+                console.log(jsonHashStable);
+            }
             console.log(`------------ STEP 10 of ${MAX_STEPS}: uploadOneFile '/repo/sources-dist-hash.json' --------------------`);
             await (0, sftp_1.uploadOneFile)('/repo/sources-dist-hash.json', jsonHashStable, hashes);
             // write news file on server
