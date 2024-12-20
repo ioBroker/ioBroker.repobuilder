@@ -174,7 +174,7 @@ export interface Config {
     replyEmail: string;
 }
 
-interface Message {
+export interface Message {
     id: string;
     uuid: string;
     'date-start'?: number | string;
