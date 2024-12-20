@@ -133,16 +133,26 @@ function getLatestRepositoryFile(sources, path) {
                 sources[name].name = name;
 
                 // read data from GitHub
-                const source = await getIoPack(sources[name]);
-                if (!source) {
+                try {
+                    const source = await getIoPack(sources[name]);
+                    if (!source) {
+                        failCounter.push(name);
+                        if (failCounter.length > 10) {
+                            clearTimeout(timeout);
+
+                            reject('Looks like there is no internet.');
+                        }
+                    } else {
+                        sources[name] = source;
+                    }
+                } catch (err) {
+                    console.error(`Cannot read "${name}": ${err}`);
                     failCounter.push(name);
                     if (failCounter.length > 10) {
                         clearTimeout(timeout);
 
                         reject('Looks like there is no internet.');
                     }
-                } else {
-                    sources[name] = source;
                 }
             }
             if (!timeout) {
