@@ -20,6 +20,6 @@
     },
     "scripts": {
         "tsc": "tsc -p tsconfig.build.json",
-        "build": "npm run tsc && node action.js"
+        "build": "npm run tsc && node action.ts"
     }
 }

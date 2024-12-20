@@ -13,9 +13,16 @@ export interface RepoAdapterObject extends ioBroker.AdapterCommon {
     weekDownloads?: number;
     published?: string;
     versionDate: string;
+    meta: string;
+    licenseUrl: string;
+    stars: number;
+    issues: number;
+    score: number;
+    node: string;
+    url?: string;
+    stat?: number;
 
     /*controller?: boolean;
-    stat?: number;
     node?: string;
     allowAdapterInstall?: boolean;
     allowAdapterUpdate?: boolean;
@@ -165,4 +172,34 @@ export interface Config {
     email: string;
     sourceEmail: string;
     replyEmail: string;
+}
+
+interface Message {
+    id: string;
+    uuid: string;
+    'date-start'?: number | string;
+    'date-end'?: number | string;
+    'node-version'?: string;
+    'npm-version'?: string;
+    os?: string;
+    repo: string;
+    conditions: {
+        // bigger(x.x.x), smaller(x.x.x), equals(x.x.x), between(x.x.x, x.x.x)
+        // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
+        [adapter: string]: '!installed' | 'active' | '!active' | string;
+    };
+    title: Record<ioBroker.Languages, string>;
+    content: Record<ioBroker.Languages, string>;
+    class: 'info' | 'warning' | 'danger';
+    created: string;
+    /** Link destination */
+    link?: string;
+    /** Title of the link */
+    linkTitle?: ioBroker.StringOrTranslated;
+    /** E.g., a base64 encoded image like, data:image/png;base64,iVBORw0KG... */
+    img?: 'string';
+    /** e.g. >= 15000 to address installations with more than 15k objects */
+    'number-of-objects'?: string;
+    /** All object db types which this message is valid for */
+    'objects-db-type'?: DbType[];
 }
