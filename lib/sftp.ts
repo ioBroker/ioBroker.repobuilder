@@ -1,15 +1,13 @@
-'use strict';
+import { PassThrough } from 'stream';
+import { getHash } from './hash';
+import { Client, type SFTPWrapper } from 'ssh2';
+import { config } from '../config';
 
-const Stream = require('stream');
-const getHash = require('./hash');
-const Client = require('ssh2').Client;
-const config = require('../config.js');
+const DEBUG = process.env.DEBUG === 'true';
+const FAST_TEST = process.env.FAST_TEST === 'true';
 
-const DEBUG = process.env.DEBUG === 'true' || process.env.DEBUG === true;
-const FAST_TEST = process.env.FAST_TEST === 'true' || process.env.FAST_TEST === true;
-
-function writeSftp(sftp, fileName, data, cb) {
-    const readStream = new Stream.PassThrough();
+function writeSftp(sftp: SFTPWrapper, fileName: string, data: Buffer | string, cb: (() => void) | null): void {
+    const readStream = new PassThrough();
 
     readStream.end(Buffer.from(data));
 
@@ -25,8 +23,12 @@ function writeSftp(sftp, fileName, data, cb) {
     });
 
     writeStream.on('end', () => {
-        DEBUG && console.log('sftp connection closed');
-        readStream.close();
+        if (DEBUG) {
+            console.log('sftp connection closed');
+        }
+
+        readStream.destroy();
+
         if (cb) {
             cb();
             cb = null;
@@ -37,7 +39,7 @@ function writeSftp(sftp, fileName, data, cb) {
     readStream.pipe(writeStream);
 }
 
-function uploadOneFile(fileName, data, hashes) {
+export function uploadOneFile(fileName: string, data: Buffer | string, hashes: Record<string, string>): Promise<void> {
     /*s3.putObject({
         Bucket: BUCKET_NAME,
         ContentType: 'application/json',
@@ -52,7 +54,7 @@ function uploadOneFile(fileName, data, hashes) {
     });*/
     return new Promise((resolve, reject) => {
         const hash = getHash(data.toString('utf8'));
-        if (hashes && hashes[fileName]) {
+        if (hashes?.[fileName]) {
             if (hashes[fileName] === hash) {
                 DEBUG && console.log(`DO NOT UPLOAD "${fileName}"`);
                 return resolve();
@@ -61,7 +63,7 @@ function uploadOneFile(fileName, data, hashes) {
 
         const conn = new Client();
         conn.on('ready', () => {
-            conn.sftp((err, sftp) => {
+            conn.sftp((err: Error | undefined, sftp: SFTPWrapper): void => {
                 if (err) {
                     return reject(err);
                 }
@@ -91,7 +93,7 @@ function uploadOneFile(fileName, data, hashes) {
     });
 }
 
-function checkAndDeleteIfExist(sftp, fileName, cb) {
+function checkAndDeleteIfExist(sftp: SFTPWrapper, fileName: string, cb: () => void): void {
     sftp.exists(fileName, doExist => {
         if (doExist) {
             sftp.unlink(fileName, cb);
@@ -101,27 +103,33 @@ function checkAndDeleteIfExist(sftp, fileName, cb) {
     });
 }
 
-function uploadFiles(sftp, tasks, cb) {
-    if (!tasks || !tasks.length) {
-        return cb && cb();
+export function uploadFiles(
+    sftp: SFTPWrapper,
+    tasks: { data: Buffer | string; fileName: string }[],
+    cb?: () => void,
+): void {
+    if (!tasks?.length) {
+        cb && cb();
+        return;
     }
     const task = tasks.shift();
 
     if (FAST_TEST) {
-        console.log(`Simulate upload of ${task.fileName}`);
-        return setImmediate(() => uploadFiles(sftp, tasks, cb));
+        console.log(`Simulate upload of ${task?.fileName}`);
+        setImmediate(() => uploadFiles(sftp, tasks, cb));
+        return;
     }
-    const readStream = new Stream.PassThrough();
+    const readStream = new PassThrough();
 
-    readStream.end(Buffer.from(task.data));
+    readStream.end(Buffer.from(task!.data));
 
-    checkAndDeleteIfExist(sftp, task.fileName, () => {
-        const writeStream = sftp.createWriteStream(task.fileName, { encoding: 'utf8' });
+    checkAndDeleteIfExist(sftp, task!.fileName, () => {
+        const writeStream = sftp.createWriteStream(task!.fileName, { encoding: 'utf8' });
 
         let done = false;
 
         writeStream.on('close', () => {
-            DEBUG && console.log(`${new Date().toISOString()} ${task.fileName} - file transferred successfully`);
+            DEBUG && console.log(`${new Date().toISOString()} ${task!.fileName} - file transferred successfully`);
             readStream.end();
             if (!done) {
                 setImmediate(() => uploadFiles(sftp, tasks, cb));
@@ -130,8 +138,12 @@ function uploadFiles(sftp, tasks, cb) {
         });
 
         writeStream.on('end', () => {
-            DEBUG && console.log('sftp connection closed');
-            readStream.close();
+            if (DEBUG) {
+                console.log('sftp connection closed');
+            }
+
+            readStream.destroy();
+
             if (!done) {
                 setImmediate(() => uploadFiles(sftp, tasks, cb));
                 done = true;
@@ -142,8 +154,3 @@ function uploadFiles(sftp, tasks, cb) {
         readStream.pipe(writeStream);
     });
 }
-
-module.exports = {
-    uploadFiles,
-    uploadOneFile,
-};

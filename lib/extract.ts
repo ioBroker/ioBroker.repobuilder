@@ -1,5 +1,5 @@
 import { Parser as TarParser } from 'tar';
-import { PassThrough , Transform } from 'node:stream';
+import { PassThrough, Transform } from 'node:stream';
 
 class CollectStream extends Transform {
     private chunks: Buffer[] = [];
@@ -8,15 +8,17 @@ class CollectStream extends Transform {
         const result: Buffer[] = this.chunks;
         this.chunks = [];
         return Buffer.concat(result);
-    };
+    }
 
     _transform(chunk: Buffer, enc: any, cb: () => void): void {
         this.chunks.push(chunk);
         cb();
-    };
+    }
 }
 
-export function extractPackageFiles(data: Buffer): Promise<{ 'io-package.json': ioBroker.AdapterObject; 'package.json': Record<string, any> }> {
+export function extractPackageFiles(
+    data: Buffer,
+): Promise<{ 'io-package.json': ioBroker.AdapterObject; 'package.json': Record<string, any> }> {
     const files = {
         'package/io-package.json': new CollectStream(),
         'package/package.json': new CollectStream(),

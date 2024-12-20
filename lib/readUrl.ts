@@ -3,7 +3,10 @@ import axios from 'axios';
 const DEBUG = process.env.DEBUG === 'true';
 const DEFAULT_TIMEOUT = 10000;
 
-export async function readUrl(url: string, auth?: { username: string; password: string }): Promise<Record<string, any>> {
+export async function readUrl(
+    url: string,
+    auth?: { username: string; password: string },
+): Promise<Record<string, any>> {
     let count = 0;
     if (DEBUG) {
         console.log(`Request ${url}`);

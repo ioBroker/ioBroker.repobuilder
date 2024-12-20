@@ -2,13 +2,26 @@ import semver from 'semver';
 import axios from 'axios';
 import { readUrl } from './readUrl';
 import { extractPackageFiles } from './extract';
-import type { RepoAdapterObject } from '../types';
+import type { NpmInfo, RepoAdapterObject } from '../types';
 
 const DEBUG = process.env.DEBUG === 'true';
 const FAST_TEST = process.env.FAST_TEST === 'true';
 const DEFAULT_TIMEOUT = 20000;
 
-const adapterCache: Record<string, Record<string, any>> = {};
+const adapterCache: Record<string, NpmInfo | null> = {};
+
+export async function getNpmVersions(adapter: string): Promise<string[] | null> {
+    adapter = adapter ? `iobroker.${adapter}` : 'iobroker';
+    adapter = adapter.toLowerCase();
+    if (adapterCache[adapter] === undefined) {
+        const url = `https://registry.npmjs.org/${adapter}`;
+        adapterCache[adapter] = (await readUrl(url)) as NpmInfo;
+    }
+    if (adapterCache[adapter]) {
+        return adapterCache[adapter]!.time ? adapterCache[adapter] && Object.keys(adapterCache[adapter]!.time) : null;
+    }
+    return null;
+}
 
 /**
  * Reads an adapter's npm version
@@ -19,26 +32,27 @@ const adapterCache: Record<string, Record<string, any>> = {};
 export async function getNpmVersion(adapter?: string): Promise<string | null> {
     adapter = adapter ? `iobroker.${adapter}` : 'iobroker';
     adapter = adapter.toLowerCase();
-    let data: Record<string, any> | undefined;
     if (adapterCache[adapter] === undefined) {
-        const url = `https://registry.npmjs.org/-/package/${adapter}/dist-tags`;
-        adapterCache[adapter] = await readUrl(url);
+        const url = `https://registry.npmjs.org/${adapter}`;
+        adapterCache[adapter] = (await readUrl(url)) as NpmInfo;
     }
-    data = adapterCache[adapter];
+    const data = adapterCache[adapter];
 
     let version = null;
-    if (data) {
-        version = semver.valid(data.latest);
+    if (data?.['dist-tags']) {
+        version = semver.valid(data['dist-tags'].latest);
 
         // If this version is alfa
         if (version?.includes('-')) {
             // find first non-alfa version
-            const versions = Object.keys(data).filter(v => !v && !v.includes('-'));
+            const versions = Object.keys(data.time).filter(
+                v => !v && !v.includes('-') && v !== 'created' && v !== 'modified',
+            );
             versions.sort((a, b) => semver.compare(a, b));
             version = semver.valid(versions.pop() || '');
         }
 
-        if (version === 'modified') {
+        if (!version) {
             console.error(`Cannot find latest version for ${adapter}: ${JSON.stringify(data)}`);
         }
         if (DEBUG) {
@@ -83,21 +97,26 @@ export async function readNpmStats(
 }
 
 export async function updatePublished(
-    name: string,
+    adapter: string,
     latestEntry: RepoAdapterObject,
     stableEntry: RepoAdapterObject | undefined,
 ): Promise<void> {
-    const url = `https://registry.npmjs.org/iobroker.${name}`;
-
-    let data;
-    try {
-        data = await readUrl(url);
-    } catch (error) {
-        console.error(`iobroker.${name} cannot read published date from npm: ${error}`);
-        throw error;
+    adapter = adapter ? `iobroker.${adapter}` : 'iobroker';
+    adapter = adapter.toLowerCase();
+    if (adapterCache[adapter] === undefined) {
+        const url = `https://registry.npmjs.org/${adapter}`;
+        try {
+            adapterCache[adapter] = (await readUrl(url)) as NpmInfo;
+        } catch (error) {
+            adapterCache[adapter] = null;
+            console.error(`${adapter} cannot read published date from npm: ${error}`);
+            throw error;
+        }
     }
+    const data = adapterCache[adapter];
+
     if (!data) {
-        console.error(`iobroker.${name} cannot read published date from npm`);
+        console.error(`${adapter} cannot read published date from npm`);
         throw new Error('Cannot read published date from npm');
     }
     const time = data.time;
@@ -123,22 +142,30 @@ export async function updatePublished(
     // cannot take modified, because if some settings change on npm (e.g., owner) the modified date changed too
     // latestEntry.versionDate = time.modified;
 
-    latestEntry.versionDate = time[latestVersion];
-    latestEntry.version = latestVersion;
+    if (latestVersion) {
+        latestEntry.versionDate = time[latestVersion];
+        latestEntry.version = latestVersion;
+    } else {
+        console.error(`Cannot find latest version for ${adapter}: ${JSON.stringify(data)}`);
+    }
 
     if (stableEntry) {
         stableEntry.published = time.created;
         stableEntry.versionDate = time[stableEntry.version];
     }
     if (stableEntry && DEBUG) {
-        console.log(`iobroker.${name} - ${stableEntry.published}`);
-        console.log(`iobroker.${name} created stable[${stableEntry.version}] - ${stableEntry.versionDate}`);
+        console.log(`${adapter} - ${stableEntry.published}`);
+        console.log(`${adapter} created stable[${stableEntry.version}] - ${stableEntry.versionDate}`);
     }
-    DEBUG && console.log(`iobroker.${name} created latest[${latestVersion}] - ${latestEntry.versionDate}`);
+    if (DEBUG) {
+        console.log(`${adapter} created latest[${latestVersion}] - ${latestEntry.versionDate}`);
+    }
 }
 
 async function readUrlBinary(url: string): Promise<Buffer> {
-    DEBUG && console.log(`readUrlBinary ${url}`);
+    if (DEBUG) {
+        console.log(`readUrlBinary ${url}`);
+    }
 
     try {
         const response = await axios(url, {

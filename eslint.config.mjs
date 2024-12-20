@@ -1,3 +1,3 @@
-import prettierConfig from '@iobroker/eslint-config/prettier.config.mjs';
+import config from '@iobroker/eslint-config';
 
-export default prettierConfig;
+export default [...config];

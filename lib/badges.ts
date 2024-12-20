@@ -1,14 +1,15 @@
-const axios = require('axios');
-const getHash = require('./hash');
-const Client = require('ssh2').Client;
-const uploadFiles = require('./sftp').uploadFiles;
-const config = require('../config.js');
+import axios from 'axios';
+import { getHash } from './hash';
+import { Client } from 'ssh2';
+import { uploadFiles } from './sftp';
+import { config } from '../config';
+import type { IoBrokerStatistics, RepoAdapterObject } from '../types';
 
-const DEBUG = process.env.DEBUG === 'true' || process.env.DEBUG === true;
+const DEBUG = process.env.DEBUG === 'true';
 
-function convertNumber(number) {
+function convertNumber(number: number): string {
     if (number < 1000) {
-        return number;
+        return number.toString();
     }
     if (number < 1000000) {
         return `${(Math.floor(number / 100) / 10).toFixed(1)}k`;
@@ -38,11 +39,15 @@ const stableBadgesPattern = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink
     </g>
 </svg>`;
 
-function generateStableBadges(repoJson, latestJson, hashes) {
-    return new Promise((resolve, reject) => {
-        const newHashes = {};
+export function generateStableBadges(
+    repoJson: Record<string, RepoAdapterObject>,
+    latestJson: Record<string, RepoAdapterObject>,
+    hashes: Record<string, string>,
+): Promise<void> {
+    return new Promise((resolve, reject): void => {
+        const newHashes: Record<string, string> = {};
 
-        const tasks = Object.keys(repoJson)
+        const tasks: { fileName: string; data: Buffer | string }[] = Object.keys(repoJson)
             .map(adapter => {
                 if (adapter.startsWith('_')) {
                     return null;
@@ -60,7 +65,7 @@ function generateStableBadges(repoJson, latestJson, hashes) {
 
                 return { fileName, data };
             })
-            .filter(task => task);
+            .filter(task => !!task);
 
         // create for all only the latest adapter
         Object.keys(latestJson).forEach(adapter => {
@@ -106,20 +111,21 @@ function generateStableBadges(repoJson, latestJson, hashes) {
         });
     });
 }
-async function readStat() {
+
+async function readStat(): Promise<IoBrokerStatistics | null> {
     try {
         const response = await axios(config.usageStatisticsURL, {
             timeout: 15000,
             validateStatus: status => status < 400,
         });
-        return response.data;
+        return response.data as IoBrokerStatistics;
     } catch (error) {
         console.warn(`Cannot readStat: ${error.response ? error.response.data : error.message || error.code}`);
         return null;
     }
 }
 
-async function generateCountBadges(hashes, stat) {
+export async function generateCountBadges(hashes: Record<string, string>, stat: IoBrokerStatistics): Promise<void> {
     try {
         stat = stat || (await readStat());
     } catch (error) {
@@ -128,8 +134,8 @@ async function generateCountBadges(hashes, stat) {
     }
 
     if (stat?.adapters) {
-        const newHashes = {};
-        const tasks = Object.keys(stat.adapters)
+        const newHashes: Record<string, string> = {};
+        const tasks: { fileName: string; data: Buffer | string }[] = Object.keys(stat.adapters)
             .map(adapter => {
                 if (adapter.startsWith('_')) {
                     return null;
@@ -168,7 +174,7 @@ async function generateCountBadges(hashes, stat) {
 
                 return { fileName, data };
             })
-            .filter(t => t);
+            .filter(t => !!t);
 
         const conn = new Client();
 
@@ -199,12 +205,6 @@ async function generateCountBadges(hashes, stat) {
                     password: config.sftpConfig_password,
                 }),
         );
-    } else {
-        console.error(`No adapters found in USAGE: ${JSON.stringify(stat)}`);
     }
+    console.error(`No adapters found in USAGE: ${JSON.stringify(stat)}`);
 }
-
-module.exports = {
-    generateStableBadges,
-    generateCountBadges,
-};

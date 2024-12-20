@@ -16,12 +16,12 @@ const axios = require('axios');
 const FAST_TEST = process.env.FAST_TEST === 'true' || process.env.FAST_TEST === true;
 const DEBUG = process.env.DEBUG === 'true' || process.env.DEBUG === true;
 const MAX_HISTORY_LENGTH = 7;
-const config = require('./config.js');
+const { config } = require('./config');
 
-const getHash = require('./lib/hash');
+const { getHash } = require('./lib/hash');
 const { uploadOneFile } = require('./lib/sftp');
 const { readUrl } = require('./lib/readUrl');
-const { readNpmStats, updatePublished, readNpmIoPack } = require('./lib/npm');
+const { readNpmStats, updatePublished, readNpmIoPack, getNpmVersions } = require('./lib/npm');
 const { getIoPack, readGithubStats } = require('./lib/github');
 const { generateStableBadges, generateCountBadges } = require('./lib/badges');
 const { generateForumStats, generateMap } = require('./lib/triggerIotServer');
@@ -34,17 +34,14 @@ function findPath(path, url) {
     }
     if (url.substring(0, 'http://'.length) === 'http://' || url.substring(0, 'https://'.length) === 'https://') {
         return url;
-    } else {
-        if (path.substring(0, 'http://'.length) === 'http://' || path.substring(0, 'https://'.length) === 'https://') {
-            return (path + url).replace(/\/\//g, '/').replace('http:/', 'http://').replace('https:/', 'https://');
-        } else {
-            if (url && url[0] === '/') {
-                return `${__dirname}/..${url}`;
-            } else {
-                return `${__dirname}/../${path}${url}`;
-            }
-        }
     }
+    if (path.substring(0, 'http://'.length) === 'http://' || path.substring(0, 'https://'.length) === 'https://') {
+        return (path + url).replace(/\/\//g, '/').replace('http:/', 'http://').replace('https:/', 'https://');
+    }
+    if (url && url[0] === '/') {
+        return `${__dirname}/..${url}`;
+    }
+    return `${__dirname}/../${path}${url}`;
 }
 
 function sortRepo(sources) {
@@ -111,7 +108,7 @@ function getLatestRepositoryFile(sources, path) {
         }, count * 2000);
 
         for (let name in sources) {
-            if (!sources.hasOwnProperty(name) || name.startsWith('_')) {
+            if (!Object.prototype.hasOwnProperty.call(sources, name) || name.startsWith('_')) {
                 continue;
             }
             if (FAST_TEST && name !== 'meteoalarm') {
@@ -173,7 +170,7 @@ function getLatestRepositoryFile(sources, path) {
     });
 }
 
-async function getStableRepositoryFile(sources, path, callback) {
+async function getStableRepositoryFile(sources, path) {
     let last;
     try {
         // read actual repository
@@ -199,12 +196,11 @@ async function getStableRepositoryFile(sources, path, callback) {
             if (timeout) {
                 timeout = null;
                 reject(`Timeout by read all package.json (${count * 2}) seconds`);
-                callback = null;
             }
         }, count * 2000);
 
         for (let name in sources) {
-            if (!sources.hasOwnProperty(name)) {
+            if (!Object.prototype.hasOwnProperty.call(sources, name)) {
                 continue;
             }
             if (FAST_TEST && name !== 'meteoalarm') {
@@ -301,9 +297,8 @@ async function getStableRepositoryFile(sources, path, callback) {
                 if (failCounter.length > 10) {
                     reject('Looks like there is no internet.');
                     return;
-                } else {
-                    console.error(`Following packages cannot be read: ${failCounter.join(', ')}`);
                 }
+                console.error(`Following packages cannot be read: ${failCounter.join(', ')}`);
             }
 
             resolve(sources);
@@ -312,11 +307,11 @@ async function getStableRepositoryFile(sources, path, callback) {
 }
 
 async function updatePublishes(latest, stable) {
-    // if (FAST_TEST) {
-    //     return;
-    // }
+    if (FAST_TEST) {
+        return;
+    }
     for (let name in latest) {
-        if (!latest.hasOwnProperty(name) || name.startsWith('_')) {
+        if (!Object.prototype.hasOwnProperty.call(latest, name) || name.startsWith('_')) {
             continue;
         }
         // take the published date from the latest repo and write it into stable repo
@@ -326,15 +321,15 @@ async function updatePublishes(latest, stable) {
         if (!latest[name].published || !latest[name].versionDate || (stable[name] && !stable[name].versionDate)) {
             try {
                 await updatePublished(name, latest[name], stable[name]);
-            } catch (err) {
+            } catch {
                 // ignore
             }
         }
     }
 }
 
-function cutHistory(adapter, name) {
-    if (!adapter || !adapter.news) {
+async function cutHistory(adapter, name) {
+    if (!adapter?.news) {
         console.error(`Adapter ${name} is invalid: ${!adapter ? 'No adapter object' : 'No news found'}`);
         return;
     }
@@ -347,6 +342,14 @@ function cutHistory(adapter, name) {
         versions.forEach(v => (adapter.news[v] = obj[v]));
         console.warn(`News for REPO ${adapter.name} were cut from ${oldLen} to ${Object.keys(versions).length}`);
     }
+    // check that the versions exist on npm
+    const npmVersions = await getNpmVersions(name);
+    versions.forEach(v => {
+        if (!npmVersions.includes(v)) {
+            console.warn(`Version ${v} of ${name} does not exist on npm.`);
+            delete adapter.news[v];
+        }
+    });
 }
 
 async function onlyNews() {
@@ -375,7 +378,7 @@ async function post(req) {
     let body;
     try {
         body = req && req.body && JSON.parse(req.body);
-    } catch (e) {
+    } catch {
         console.warn('Cannot parse body. May be it is time trigger.');
     }
 
@@ -412,7 +415,7 @@ async function post(req) {
 
             console.log(`------------ STEP 1 of ${MAX_STEPS}: readGithubStats --------------------`);
             // take GitHub statistics from current repo. Because of the rate limit, we can read only 10 adapters per session.
-            actualLatest &&
+            if (actualLatest) {
                 Object.keys(latest).forEach(adapter => {
                     if (!actualLatest[adapter]) {
                         return;
@@ -427,6 +430,7 @@ async function post(req) {
                         latest[adapter].score = actualLatest[adapter].score;
                     }
                 });
+            }
             await readGithubStats(latest);
 
             console.log(`------------ STEP 2 of ${MAX_STEPS}: readNpmStats --------------------`);
