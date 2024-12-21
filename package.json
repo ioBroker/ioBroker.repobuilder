@@ -18,8 +18,9 @@
         "tar": "^7.4.3",
         "typescript": "^5.7.2"
     },
+    "main": "action.js",
     "scripts": {
         "tsc": "tsc -p tsconfig.build.json",
-        "build": "npm run tsc && node action.ts"
+        "build": "npm ci && npm run tsc && node action.js"
     }
 }
