@@ -1,0 +1,36 @@
+name: keepAlive
+#
+# GitHub suspends scheduled worklflows for inactive repositories. This worklflow is triggered according to cron schedule and performs an empty commit. 
+# This ensures that the repository is no longer considered stale by GitHub and thus avoids stopping workflow processing.
+#
+on:
+  workflow_dispatch:
+
+  # schedule:
+    # * is a special character in YAML, so you have to quote this string
+    # every friday at 1:00
+    # - cron:  '30 19 * * 4'
+
+jobs:
+  keepAlive:
+    name: keepAlive
+      
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: |
+          git config user.name "  ioBroker Bot"
+          git config user.email "<>"
+          git commit --allow-empty -m "testing"
+          git push -u origin HEAD
+        env:
+          IOBBOT_GITHUB_TOKEN: ${{ secrets.IOBBOT_GITHUB_TOKEN }}
+      
