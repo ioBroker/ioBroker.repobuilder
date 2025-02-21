@@ -1,4 +1,4 @@
-name: keepAlive
+name: Trigger keep-alive commits
 #
 # GitHub suspends scheduled worklflows for inactive repositories. This worklflow is triggered according to cron schedule and performs an empty commit. 
 # This ensures that the repository is no longer considered stale by GitHub and thus avoids stopping workflow processing.
@@ -12,8 +12,8 @@ on:
     # - cron:  '30 19 * * 4'
 
 jobs:
-  keepAlive:
-    name: keepAlive
+  keep-alive:
+    name: keep-alive
       
     runs-on: ubuntu-latest
 
