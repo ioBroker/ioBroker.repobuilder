@@ -1,15 +1,15 @@
 name: Trigger keep-alive commits
 #
-# GitHub suspends scheduled worklflows for inactive repositories. This worklflow is triggered according to cron schedule and performs an empty commit. 
+# GitHub suspends scheduled workflows for inactive repositories. An repository is consired inactive if there was no commit within the last 60 days. This worklflow is triggered according to cron schedule and performs an empty commit. 
 # This ensures that the repository is no longer considered stale by GitHub and thus avoids stopping workflow processing.
 #
 on:
   workflow_dispatch:
 
-  # schedule:
+  schedule:
     # * is a special character in YAML, so you have to quote this string
-    # every friday at 1:00
-    # - cron:  '30 19 * * 4'
+    # at 6:00 UTC at 5 and 20's of every month
+    - cron:  '0 6 5,20 * *'
 
 jobs:
   keep-alive:
