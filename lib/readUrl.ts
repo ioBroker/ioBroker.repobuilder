@@ -33,7 +33,7 @@ export async function readUrl(
                 count++;
             } else {
                 console.error(
-                    `Status code is not 200 (${(error as AxiosError).status}): ${JSON.stringify((error as AxiosError).response?.data || (error as AxiosError).message || (error as AxiosError).code)}`,
+                    `Status code is not 200 (${(error as AxiosError).status}) [${url}]: ${JSON.stringify((error as AxiosError).response?.data || (error as AxiosError).message || (error as AxiosError).code)}`,
                 );
                 // Error
                 throw new Error(error.response ? error.response.data : error.message || error.code);

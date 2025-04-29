@@ -78,8 +78,9 @@ export async function readNpmStats(
                 i++;
                 console.log(`[${i}/${max}]Get npm stats for ${adapter}`);
             }
+            const url = `https://api.npmjs.org/downloads/point/last-week/iobroker.${adapter}`;
             try {
-                const response = await axios(`https://api.npmjs.org/downloads/point/last-week/iobroker.${adapter}`, {
+                const response = await axios(url, {
                     validateStatus: (status: number): boolean => status < 400,
                     timeout: DEFAULT_TIMEOUT,
                     headers: {
@@ -91,7 +92,7 @@ export async function readNpmStats(
                 }
             } catch (error: unknown) {
                 console.error(
-                    `Status code is not 200 (${(error as AxiosError).status}): ${JSON.stringify((error as AxiosError).response?.data || (error as AxiosError).message || (error as AxiosError).code)}`,
+                    `Status code is not 200 (${(error as AxiosError).status}) [${url}]: ${JSON.stringify((error as AxiosError).response?.data || (error as AxiosError).message || (error as AxiosError).code)}`,
                 );
             }
             sources[adapter].weekDownloads = sources[adapter].weekDownloads || 0;
@@ -178,9 +179,15 @@ async function readUrlBinary(url: string): Promise<Buffer> {
             validateStatus: (status: number): boolean => status < 400,
         });
         return response.data;
-    } catch (error) {
-        console.error(`Status code is not 200: ${error.response ? error.response.data : error.message || error.code}`);
-        throw new Error(error.response ? error.response.data : error.message || error.code);
+    } catch (error: unknown) {
+        console.error(
+            `Status code is not 200 (${(error as AxiosError).status}) [${url}]: ${JSON.stringify((error as AxiosError).response?.data || (error as AxiosError).message || (error as AxiosError).code)}`,
+        );
+        throw new Error(
+            JSON.stringify(
+                (error as AxiosError).response?.data || (error as AxiosError).message || (error as AxiosError).code,
+            ),
+        );
     }
 }
 
