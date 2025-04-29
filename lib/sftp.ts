@@ -35,11 +35,15 @@ function writeSftp(sftp: SFTPWrapper, fileName: string, data: Buffer | string, c
         }
     });
 
-    // initiate transfer of file
+    // initiate transfer of a file
     readStream.pipe(writeStream);
 }
 
 export function uploadOneFile(fileName: string, data: Buffer | string, hashes: Record<string, string>): Promise<void> {
+    if (!config.sftpConfig_host) {
+        console.log('SFTP upload disabled, because no host is configured');
+        return Promise.resolve();
+    }
     /*s3.putObject({
         Bucket: BUCKET_NAME,
         ContentType: 'application/json',
