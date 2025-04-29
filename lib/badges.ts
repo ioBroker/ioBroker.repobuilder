@@ -116,7 +116,7 @@ async function readStat(): Promise<IoBrokerStatistics | null> {
     try {
         const response = await axios(config.usageStatisticsURL, {
             timeout: 15000,
-            validateStatus: status => status < 400,
+            validateStatus: (status: number): boolean => status < 400,
         });
         return response.data as IoBrokerStatistics;
     } catch (error) {

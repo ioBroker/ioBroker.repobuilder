@@ -2,25 +2,26 @@
     "version": "2.0.0",
     "private": true,
     "dependencies": {
-        "@aws-sdk/client-s3": "^3.716.0",
-        "@aws-sdk/client-ses": "^3.716.0",
-        "@iobroker/eslint-config": "^1.0.0",
-        "@iobroker/types": "^7.0.6",
+        "@aws-sdk/client-s3": "^3.798.0",
+        "@aws-sdk/client-ses": "^3.798.0",
+        "@iobroker/eslint-config": "^2.0.1",
+        "@iobroker/types": "^7.0.7",
         "@types/extend": "^3.0.4",
-        "@types/node": "^22.10.2",
-        "@types/semver": "^7.5.8",
-        "@types/ssh2": "^1.15.1",
+        "@types/node": "^22.15.3",
+        "@types/semver": "^7.7.0",
+        "@types/ssh2": "^1.15.5",
         "@types/tar": "^6.1.13",
-        "axios": "^1.7.9",
+        "axios": "^1.9.0",
         "extend": "^3.0.2",
-        "semver": "^7.6.3",
+        "semver": "^7.7.1",
         "ssh2": "^1.16.0",
         "tar": "^7.4.3",
-        "typescript": "^5.7.2"
+        "typescript": "^5.8.3"
     },
     "main": "action.js",
     "scripts": {
         "tsc": "tsc -p tsconfig.build.json",
-        "build": "npm ci && npm run tsc && node action.js"
+        "build": "npm ci && npm run tsc && node action.js",
+        "lint": "eslint -c eslint.config.mjs"
     }
 }

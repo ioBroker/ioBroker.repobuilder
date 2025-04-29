@@ -1,5 +1,5 @@
-import axios, { type AxiosError} from "axios";
-import { config }  from '../config';
+import axios from 'axios';
+import { config } from '../config';
 
 export async function generateMap(): Promise<void> {
     try {
@@ -20,6 +20,7 @@ export async function generateForumStats(): Promise<void> {
         });
     } catch (error) {
         console.warn(
-            `Cannot generateForumStats: ${error.response ? error.response.data : error.message || error.code}`);
+            `Cannot generateForumStats: ${error.response ? error.response.data : error.message || error.code}`,
+        );
     }
 }

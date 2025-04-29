@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { type AxiosError } from 'axios';
 import type { Message } from '../types';
 
 const DEBUG = process.env.DEBUG === 'true';
@@ -25,7 +25,7 @@ export async function readUrl(
             const response = await axios(url, {
                 headers,
                 timeout: DEFAULT_TIMEOUT,
-                validateStatus: status => status < 400,
+                validateStatus: (status: number): boolean => status < 400,
             });
             return response.data || null;
         } catch (error) {
@@ -33,7 +33,7 @@ export async function readUrl(
                 count++;
             } else {
                 console.error(
-                    `Status code is not 200: ${error.response ? error.response.data : error.message || error.code}`,
+                    `Status code is not 200 (${(error as AxiosError).status}): ${JSON.stringify((error as AxiosError).response?.data || (error as AxiosError).message || (error as AxiosError).code)}`,
                 );
                 // Error
                 throw new Error(error.response ? error.response.data : error.message || error.code);

@@ -1,6 +1,6 @@
 import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { config } from '../config';
-import {RepoAdapterObject} from "../types";
+import type { RepoAdapterObject } from '../types';
 
 const FAST_TEST = process.env.FAST_TEST === 'true';
 const BUCKET = 'repos-iob';
@@ -15,7 +15,10 @@ const s3 = new S3Client({
     },
 });
 
-export async function readReposFromS3(tenant: string | null, fileName?: string): Promise<Record<string, RepoAdapterObject>> {
+export async function readReposFromS3(
+    tenant: string | null,
+    fileName?: string,
+): Promise<Record<string, RepoAdapterObject>> {
     tenant = tenant || COMMUNITY_FOLDER;
 
     const params = {
@@ -27,7 +30,7 @@ export async function readReposFromS3(tenant: string | null, fileName?: string):
         const command = new GetObjectCommand(params);
         const response = await s3.send(command);
         // The Body object also has 'transformToByteArray' and 'transformToWebStream' methods.
-        let file = await response.Body?.transformToString('utf8');
+        const file = await response.Body?.transformToString('utf8');
         if (file && !file.startsWith('<?xml')) {
             try {
                 return JSON.parse(file);
@@ -41,7 +44,11 @@ export async function readReposFromS3(tenant: string | null, fileName?: string):
     return {};
 }
 
-export async function writeReposToS3(tenant: string | null, fileName: string, json: string | Record<string, RepoAdapterObject>): Promise<void> {
+export async function writeReposToS3(
+    tenant: string | null,
+    fileName: string,
+    json: string | Record<string, RepoAdapterObject>,
+): Promise<void> {
     tenant = tenant || COMMUNITY_FOLDER;
 
     fileName = fileName || STABLE_FILE;

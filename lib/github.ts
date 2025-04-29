@@ -128,7 +128,7 @@ export async function readGithubStats(sources: Record<string, RepoAdapterObject>
             try {
                 const response = await axios(`https://api.github.com/search/repositories?q=ioBroker.${adapter}`, {
                     timeout: 15000,
-                    validateStatus: status => status < 400,
+                    validateStatus: (status: number): boolean => status < 400,
                     headers: {
                         'User-Agent': 'ioBroker.repositories',
                         Authentication: `Basic ${Buffer.from('GermanBluefox').toString('base64')}`,
@@ -167,6 +167,8 @@ export async function readGithubStats(sources: Record<string, RepoAdapterObject>
  * Extract the license from io-package or package.json
  *
  * @param options io-package.json and package.json contents
+ * @param options.ioPackJson io-package.json as an object
+ * @param options.packJson package.json as an object
  */
 function extractLicenseInfo(options: {
     ioPackJson: ioBroker.AdapterObject;

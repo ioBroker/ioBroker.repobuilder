@@ -23,7 +23,7 @@ export async function readHashesFromS3(): Promise<Record<string, string>> {
     try {
         const response = await s3.send(command);
         // The Body object also has 'transformToByteArray' and 'transformToWebStream' methods.
-        let file = await response.Body?.transformToString();
+        const file = await response.Body?.transformToString();
         console.log(`Read hashes: ${file?.length}`);
         if (file && !file.startsWith('<?xml')) {
             try {

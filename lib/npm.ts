@@ -1,5 +1,5 @@
 import semver from 'semver';
-import axios from 'axios';
+import axios, { type AxiosError } from 'axios';
 import { readUrl } from './readUrl';
 import { extractPackageFiles } from './extract';
 import type { NpmInfo, RepoAdapterObject } from '../types';
@@ -27,7 +27,7 @@ export async function getNpmVersions(adapter: string): Promise<string[] | null> 
  * Reads an adapter's npm version
  *
  * @param adapter The adapter to read the npm version from. Null for the root ioBroker packet
- * @return The version of the adapter or null if the version could not be read
+ * @returns The version of the adapter or null if the version could not be read
  */
 export async function getNpmVersion(adapter?: string): Promise<string | null> {
     adapter = adapter ? `iobroker.${adapter}` : 'iobroker';
@@ -44,7 +44,7 @@ export async function getNpmVersion(adapter?: string): Promise<string | null> {
 
         // If this version is alfa
         if (version?.includes('-')) {
-            // find first non-alfa version
+            // find the first non-alfa version
             const versions = Object.keys(data.time).filter(
                 v => v && !v.includes('-') && v !== 'created' && v !== 'modified',
             );
@@ -80,7 +80,7 @@ export async function readNpmStats(
             }
             try {
                 const response = await axios(`https://api.npmjs.org/downloads/point/last-week/iobroker.${adapter}`, {
-                    validateStatus: status => status < 400,
+                    validateStatus: (status: number): boolean => status < 400,
                     timeout: DEFAULT_TIMEOUT,
                     headers: {
                         'User-Agent': 'ioBroker.repositories',
@@ -89,9 +89,9 @@ export async function readNpmStats(
                 if (response.data && response.data.downloads !== undefined) {
                     sources[adapter].weekDownloads = response.data.downloads;
                 }
-            } catch (error) {
+            } catch (error: unknown) {
                 console.error(
-                    `Status code is not 200: ${error.response ? error.response.data : error.message || error.code}`,
+                    `Status code is not 200 (${(error as AxiosError).status}): ${JSON.stringify((error as AxiosError).response?.data || (error as AxiosError).message || (error as AxiosError).code)}`,
                 );
             }
             sources[adapter].weekDownloads = sources[adapter].weekDownloads || 0;
@@ -175,7 +175,7 @@ async function readUrlBinary(url: string): Promise<Buffer> {
         const response = await axios(url, {
             timeout: DEFAULT_TIMEOUT,
             responseType: 'arraybuffer',
-            validateStatus: status => status < 400,
+            validateStatus: (status: number): boolean => status < 400,
         });
         return response.data;
     } catch (error) {
