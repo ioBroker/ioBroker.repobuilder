@@ -44,6 +44,11 @@ export function generateStableBadges(
     latestJson: Record<string, RepoAdapterObject>,
     hashes: Record<string, string>,
 ): Promise<void> {
+    if (!config.sftpConfig_host) {
+        console.warn('No SFTP host defined. Cannot upload badges.');
+        return Promise.resolve();
+    }
+
     return new Promise((resolve, reject): void => {
         const newHashes: Record<string, string> = {};
 
@@ -177,6 +182,11 @@ export async function generateCountBadges(hashes: Record<string, string>, stat: 
             .filter(t => !!t);
 
         const conn = new Client();
+
+        if (!config.sftpConfig_host) {
+            console.warn('No SFTP host defined. Cannot upload hashes.');
+            return Promise.resolve();
+        }
 
         return new Promise((resolve, reject) =>
             conn

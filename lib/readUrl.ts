@@ -27,6 +27,10 @@ export async function readUrl(
                 timeout: DEFAULT_TIMEOUT,
                 validateStatus: (status: number): boolean => status < 400,
             });
+            if (count > 0) {
+                console.log(`Retry ${count} for "${url}". But OK`);
+            }
+
             return response.data || null;
         } catch (error) {
             if ((error.code === 'ECONNABORTED' || error.code === 'ESOCKETTIMEDOUT') && count < 5) {
