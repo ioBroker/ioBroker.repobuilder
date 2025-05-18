@@ -1,5 +1,8 @@
 import semver from 'semver';
 import axios, { type AxiosError } from 'axios';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { readUrl } from './readUrl';
 import { extractPackageFiles } from './extract';
 import type { NpmInfo, RepoAdapterObject } from '../types';
@@ -195,7 +198,16 @@ export async function readNpmIoPack(
     name: string,
     version: string,
 ): Promise<{ 'io-package.json': ioBroker.AdapterObject; 'package.json': Record<string, any> }> {
-    // https://registry.npmjs.org/iobroker.admin/-/iobroker.admin-4.0.5.tgz
-    const data = await readUrlBinary(`https://registry.npmjs.org/iobroker.${name}/-/iobroker.${name}-${version}.tgz`);
+    let data: Buffer;
+    const cachedFileName = join(tmpdir(), `iobroker.${name}-${version}.tgz`);
+    if (existsSync(cachedFileName)) {
+        data = readFileSync(cachedFileName);
+    } else {
+        // https://registry.npmjs.org/iobroker.admin/-/iobroker.admin-4.0.5.tgz
+        data = await readUrlBinary(`https://registry.npmjs.org/iobroker.${name}/-/iobroker.${name}-${version}.tgz`);
+        writeFileSync(cachedFileName, data);
+    }
+
+    // Save version file for hash
     return extractPackageFiles(data);
 }

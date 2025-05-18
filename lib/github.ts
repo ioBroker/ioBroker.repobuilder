@@ -170,7 +170,7 @@ export async function readGithubStats(sources: Record<string, RepoAdapterObject>
  * @param options.ioPackJson io-package.json as an object
  * @param options.packJson package.json as an object
  */
-function extractLicenseInfo(options: {
+export function extractLicenseInfo(options: {
     ioPackJson: ioBroker.AdapterObject;
     packJson: Record<string, any>;
 }): ioBroker.LicenseInformation {

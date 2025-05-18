@@ -27,6 +27,7 @@ const triggerIotServer_1 = require("./lib/triggerIotServer");
 const hashes_1 = require("./lib/hashes");
 const repos_1 = require("./lib/repos");
 const config_1 = require("./config");
+const extend_1 = __importDefault(require("extend"));
 const FAST_TEST = process.env.FAST_TEST === 'true';
 const DEBUG = process.env.DEBUG === 'true';
 const MAX_HISTORY_LENGTH = 7;
@@ -124,26 +125,87 @@ function getLatestRepositoryFile(sources, path) {
                     console.log(`Read io-package for "${name}"...`);
                 }
                 sources[name].name = name;
-                // read data from GitHub
+                // Read data from npm
+                let version = null;
                 try {
-                    const source = await (0, github_1.getIoPack)(sources[name]);
-                    if (!source) {
+                    // Read the latest tag on npm
+                    version = await (0, npm_1.getNpmVersion)(name);
+                }
+                catch (error) {
+                    console.error(`Cannot read latest version for "${name}": ${error}`);
+                }
+                if (version) {
+                    let source = sources[name];
+                    try {
+                        const packs = await (0, npm_1.readNpmIoPack)(name, version);
+                        const pack = packs['package.json'];
+                        const ioPack = packs['io-package.json'];
+                        // validate the pack file
+                        if (!packs['package.json']?.version) {
+                            throw new Error(`package.json is invalid for ${source.name}`);
+                        }
+                        // validate the io-pack file
+                        if (!ioPack.common?.version ||
+                            !ioPack.common.name ||
+                            (!ioPack.native && source.name !== 'js-controller')) {
+                            throw new Error(`io-package.json is invalid for ${source.name}`);
+                        }
+                        if (ioPack?.common) {
+                            // remember the type from repo
+                            const type = source.type;
+                            source = (0, extend_1.default)(true, source, ioPack.common);
+                            // write into common the node requirements
+                            if (pack?.engines?.node) {
+                                source.node = pack.engines.node;
+                            }
+                            // overwrite type of adapter from repository
+                            if (type) {
+                                source.type = type;
+                            }
+                            const licenseInfo = (0, github_1.extractLicenseInfo)({ ioPackJson: ioPack, packJson: pack });
+                            source.licenseInformation = licenseInfo;
+                            // license and licenseUrl now contained in licenseInfo, but keep it for backward compatibility (14.02.2024)
+                            source.license = licenseInfo.license;
+                            if (licenseInfo.link) {
+                                source.licenseUrl = licenseInfo.link;
+                            }
+                            // To optimize the size of the repo, store the license information only if it is not free
+                            // Later on if admin 6.14.0 is old enough, we should remove license/licenseUrl and publish licenseInfo ALWAYS instead
+                            if (source.licenseInformation &&
+                                (source.licenseInformation.type === 'free' ||
+                                    source.licenseInformation.type === undefined)) {
+                                delete source.licenseInformation;
+                            }
+                        }
+                        source.version = version;
+                        sources[name] = source;
+                    }
+                    catch (error) {
+                        console.warn(`Cannot read io-package "${name}" from npm: ${error}`);
+                    }
+                }
+                else {
+                    // read data from GitHub
+                    try {
+                        const source = await (0, github_1.getIoPack)(sources[name]);
+                        if (!source) {
+                            failCounter.push(name);
+                            if (failCounter.length > 10) {
+                                clearTimeout(timeout);
+                                reject(new Error('Looks like there is no internet.'));
+                            }
+                        }
+                        else {
+                            sources[name] = source;
+                        }
+                    }
+                    catch (err) {
+                        console.error(`Cannot read "${name}": ${err}`);
                         failCounter.push(name);
                         if (failCounter.length > 10) {
                             clearTimeout(timeout);
                             reject(new Error('Looks like there is no internet.'));
                         }
-                    }
-                    else {
-                        sources[name] = source;
-                    }
-                }
-                catch (err) {
-                    console.error(`Cannot read "${name}": ${err}`);
-                    failCounter.push(name);
-                    if (failCounter.length > 10) {
-                        clearTimeout(timeout);
-                        reject(new Error('Looks like there is no internet.'));
                     }
                 }
             }
@@ -232,7 +294,7 @@ async function getStableRepositoryFile(sources, path) {
                 if (DEBUG) {
                     console.log(`Read io-package from npm for "${name}"...`);
                 }
-                // read data from GitHub
+                // read data from npm
                 try {
                     const data = await (0, npm_1.readNpmIoPack)(name, sources[name].version);
                     const oldData = {

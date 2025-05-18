@@ -14,14 +14,15 @@ import axios from 'axios';
 import { getHash } from './lib/hash';
 import { uploadOneFile } from './lib/sftp';
 import { readUrl } from './lib/readUrl';
-import { readNpmStats, updatePublished, readNpmIoPack, getNpmVersions } from './lib/npm';
-import { getIoPack, readGithubStats } from './lib/github';
+import { readNpmStats, updatePublished, readNpmIoPack, getNpmVersions, getNpmVersion } from './lib/npm';
+import { extractLicenseInfo, getIoPack, readGithubStats } from './lib/github';
 import { generateStableBadges, generateCountBadges } from './lib/badges';
 import { generateForumStats, generateMap } from './lib/triggerIotServer';
 import { readHashesFromS3, writeHashesToS3 } from './lib/hashes';
 import { readReposFromS3, writeReposToS3 } from './lib/repos';
 import { config } from './config';
 import type { IoBrokerStatistics, Message, RepoAdapterObject, RepoInfo, StoredRepoAdapterObject } from './types';
+import extend from 'extend';
 
 const FAST_TEST = process.env.FAST_TEST === 'true';
 const DEBUG = process.env.DEBUG === 'true';
@@ -135,26 +136,95 @@ function getLatestRepositoryFile(
                 }
                 sources[name].name = name;
 
-                // read data from GitHub
+                // Read data from npm
+                let version: null | string = null;
                 try {
-                    const source = await getIoPack(sources[name]);
-                    if (!source) {
+                    // Read the latest tag on npm
+                    version = await getNpmVersion(name);
+                } catch (error) {
+                    console.error(`Cannot read latest version for "${name}": ${error}`);
+                }
+                if (version) {
+                    let source = sources[name];
+                    try {
+                        const packs = await readNpmIoPack(name, version);
+                        const pack = packs['package.json'];
+                        const ioPack = packs['io-package.json'];
+                        // validate the pack file
+                        if (!packs['package.json']?.version) {
+                            throw new Error(`package.json is invalid for ${source.name}`);
+                        }
+                        // validate the io-pack file
+                        if (
+                            !ioPack.common?.version ||
+                            !ioPack.common.name ||
+                            (!ioPack.native && source.name !== 'js-controller')
+                        ) {
+                            throw new Error(`io-package.json is invalid for ${source.name}`);
+                        }
+
+                        if (ioPack?.common) {
+                            // remember the type from repo
+                            const type = source.type;
+                            source = extend(true, source, ioPack.common);
+
+                            // write into common the node requirements
+                            if (pack?.engines?.node) {
+                                source.node = pack.engines.node;
+                            }
+
+                            // overwrite type of adapter from repository
+                            if (type) {
+                                source.type = type;
+                            }
+
+                            const licenseInfo = extractLicenseInfo({ ioPackJson: ioPack, packJson: pack });
+                            source.licenseInformation = licenseInfo;
+
+                            // license and licenseUrl now contained in licenseInfo, but keep it for backward compatibility (14.02.2024)
+                            source.license = licenseInfo.license;
+                            if (licenseInfo.link) {
+                                source.licenseUrl = licenseInfo.link;
+                            }
+
+                            // To optimize the size of the repo, store the license information only if it is not free
+                            // Later on if admin 6.14.0 is old enough, we should remove license/licenseUrl and publish licenseInfo ALWAYS instead
+                            if (
+                                source.licenseInformation &&
+                                (source.licenseInformation.type === 'free' ||
+                                    source.licenseInformation.type === undefined)
+                            ) {
+                                delete source.licenseInformation;
+                            }
+                        }
+
+                        source.version = version;
+                        sources[name] = source;
+                    } catch (error) {
+                        console.warn(`Cannot read io-package "${name}" from npm: ${error}`);
+                    }
+                } else {
+                    // read data from GitHub
+                    try {
+                        const source = await getIoPack(sources[name]);
+                        if (!source) {
+                            failCounter.push(name);
+                            if (failCounter.length > 10) {
+                                clearTimeout(timeout);
+
+                                reject(new Error('Looks like there is no internet.'));
+                            }
+                        } else {
+                            sources[name] = source;
+                        }
+                    } catch (err) {
+                        console.error(`Cannot read "${name}": ${err}`);
                         failCounter.push(name);
                         if (failCounter.length > 10) {
                             clearTimeout(timeout);
 
                             reject(new Error('Looks like there is no internet.'));
                         }
-                    } else {
-                        sources[name] = source;
-                    }
-                } catch (err) {
-                    console.error(`Cannot read "${name}": ${err}`);
-                    failCounter.push(name);
-                    if (failCounter.length > 10) {
-                        clearTimeout(timeout);
-
-                        reject(new Error('Looks like there is no internet.'));
                     }
                 }
             }
@@ -262,7 +332,7 @@ async function getStableRepositoryFile(
                     console.log(`Read io-package from npm for "${name}"...`);
                 }
 
-                // read data from GitHub
+                // read data from npm
                 try {
                     const data = await readNpmIoPack(name, sources[name].version);
                     const oldData = {
