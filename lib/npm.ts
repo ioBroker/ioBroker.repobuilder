@@ -129,7 +129,8 @@ export async function updatePublished(
     }
     const time = data.time;
     let latestVersion;
-    if (!data['dist-tags'] || !data['dist-tags'].latest) {
+    if (!data['dist-tags']?.latest || data['dist-tags'].latest.includes('-')) {
+        // No latest tag or it is a prerelease/alpha version - find the last normal (non-prerelease) version
         const versions = Object.keys(time).filter(v => v && v !== 'created' && v !== 'modified' && !v.includes('-'));
         versions.sort((a, b) => {
             if (time[a] === time[b]) {
