@@ -1,5 +1,5 @@
 import semver from 'semver';
-import axios, { type AxiosError } from 'axios';
+import axios, { type AxiosError, type AxiosResponse } from 'axios';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -10,6 +10,32 @@ import type { NpmInfo, RepoAdapterObject } from '../types';
 const DEBUG = process.env.DEBUG === 'true';
 const FAST_TEST = process.env.FAST_TEST === 'true';
 const DEFAULT_TIMEOUT = 20000;
+
+const RATE_LIMIT_RETRY_DELAYS_MS = [30_000, 60_000, 120_000];
+
+async function sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function axiosWithRateLimitRetry(url: string, options: Parameters<typeof axios>[1]): Promise<AxiosResponse> {
+    for (let attempt = 0; attempt <= RATE_LIMIT_RETRY_DELAYS_MS.length; attempt++) {
+        try {
+            return await axios(url, options);
+        } catch (error: unknown) {
+            const status = (error as AxiosError).response?.status ?? (error as AxiosError).status;
+            const isRateLimit = status === 429 || status === 430;
+            if (isRateLimit && attempt < RATE_LIMIT_RETRY_DELAYS_MS.length) {
+                const delayMs = RATE_LIMIT_RETRY_DELAYS_MS[attempt];
+                console.log(`Rate limit (${status}) for "${url}". Retrying after ${delayMs / 1000}s...`);
+                await sleep(delayMs);
+            } else {
+                throw error;
+            }
+        }
+    }
+    // unreachable, but satisfies TypeScript
+    throw new Error(`Failed to fetch "${url}" after retries`);
+}
 
 const adapterCache: Record<string, NpmInfo | null> = {};
 
@@ -83,7 +109,7 @@ export async function readNpmStats(
             }
             const url = `https://api.npmjs.org/downloads/point/last-week/iobroker.${adapter}`;
             try {
-                const response = await axios(url, {
+                const response = await axiosWithRateLimitRetry(url, {
                     validateStatus: (status: number): boolean => status < 400,
                     timeout: DEFAULT_TIMEOUT,
                     headers: {

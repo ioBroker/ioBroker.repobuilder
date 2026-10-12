@@ -388,7 +388,7 @@ async function cutHistory(adapter, name) {
     if (npmVersions) {
         versions.forEach(v => {
             if (!npmVersions.includes(v)) {
-                console.warn(`Version ${v} of ${name} does not exist on npm.`);
+                console.warn(`Dropped news entry ${v} of adapter ${name}: version does not exist on npm.`);
                 delete adapter.news[v];
             }
         });
