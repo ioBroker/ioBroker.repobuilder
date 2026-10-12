@@ -1,5 +1,5 @@
 import semver from 'semver';
-import axios, { type AxiosError } from 'axios';
+import axios, { type AxiosError, type AxiosResponse } from 'axios';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -17,7 +17,7 @@ async function sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function axiosWithRateLimitRetry(url: string, options: Parameters<typeof axios>[1]): Promise<ReturnType<typeof axios>> {
+async function axiosWithRateLimitRetry(url: string, options: Parameters<typeof axios>[1]): Promise<AxiosResponse> {
     for (let attempt = 0; attempt <= RATE_LIMIT_RETRY_DELAYS_MS.length; attempt++) {
         try {
             return await axios(url, options);
