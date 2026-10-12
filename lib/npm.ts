@@ -11,7 +11,8 @@ const DEBUG = process.env.DEBUG === 'true';
 const FAST_TEST = process.env.FAST_TEST === 'true';
 const DEFAULT_TIMEOUT = 20000;
 
-const RATE_LIMIT_RETRY_DELAYS_MS = [30_000, 60_000, 120_000];
+const RATE_LIMIT_RETRY_DELAYS_MS = [15_000, 30_000, 60_000, 120_000];
+const NPM_STATS_INTER_REQUEST_DELAY_MS = 1_000;
 
 async function sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -125,6 +126,7 @@ export async function readNpmStats(
                 );
             }
             sources[adapter].weekDownloads = sources[adapter].weekDownloads || 0;
+            await sleep(NPM_STATS_INTER_REQUEST_DELAY_MS);
         }
     }
     return sources;
