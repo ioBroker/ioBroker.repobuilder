@@ -72,29 +72,81 @@ function sortRepo(sources: Record<string, StoredRepoAdapterObject>): Record<stri
     return __sources;
 }
 
+/**
+ * `/getUsage` aggregates the statistics in the database and uploads `statistics.json` (SFTP to
+ * iobroker.live, POST to www.iobroker.net) before it answers. Since the link server was rebuilt in
+ * September 2026 that takes about 25 s; with the former limit of 15 s every call was aborted and the
+ * count badges silently stopped updating. nginx in front of it gives up after 60 s anyway.
+ */
+const USAGE_STATISTICS_TIMEOUT = 120_000;
+
+/** The copy that `/getUsage` publishes on every call - used when the call itself fails */
+const USAGE_STATISTICS_FALLBACK_URL = 'https://iobroker.live/statistics.json';
+
+async function fetchInstallStatistics(url: string, timeout: number): Promise<IoBrokerStatistics | null> {
+    const response = await axios(url, {
+        timeout,
+        validateStatus: status => status < 400,
+    });
+    const body: IoBrokerStatistics = response.data;
+    return body?.adapters ? body : null;
+}
+
+function axiosErrorText(error: any): string {
+    const data = error.response?.data;
+    if (data) {
+        return typeof data === 'string' ? data : JSON.stringify(data);
+    }
+    return error.message || error.code;
+}
+
 async function readInstallStatistics(sources: Record<string, RepoAdapterObject>): Promise<IoBrokerStatistics | null> {
     if (FAST_TEST) {
         return null;
     }
 
+    let body: IoBrokerStatistics | null = null;
+    const start = Date.now();
     try {
-        const response = await axios(config.usageStatisticsURL, {
-            timeout: 15000,
-            validateStatus: status => status < 400,
-        });
-        const body: IoBrokerStatistics = response.data;
-        if (body?.adapters) {
-            Object.keys(body.adapters).forEach(
-                adapter => sources[adapter] && (sources[adapter].stat = body.adapters[adapter]),
-            );
+        body = await fetchInstallStatistics(config.usageStatisticsURL, USAGE_STATISTICS_TIMEOUT);
+        if (body) {
+            console.log(`Install statistics received in ${Math.round((Date.now() - start) / 1000)}s`);
+        } else {
+            console.warn('Cannot readInstallStatistics: answer contains no adapters');
         }
-        return body;
     } catch (error) {
         console.warn(
-            `Cannot readInstallStatistics: ${error.response ? error.response.data : error.message || error.code}`,
+            `Cannot readInstallStatistics after ${Math.round((Date.now() - start) / 1000)}s: ${axiosErrorText(error)}`,
         );
+    }
+
+    // iobroker.live resets a connection now and then, so try the fallback more than once
+    for (let attempt = 1; !body && attempt <= 3; attempt++) {
+        try {
+            body = await fetchInstallStatistics(USAGE_STATISTICS_FALLBACK_URL, 30_000);
+            if (body) {
+                // GitHub annotation: visible in the run summary without failing the job
+                console.log(
+                    `::warning::getUsage failed, install statistics taken from ${USAGE_STATISTICS_FALLBACK_URL} instead`,
+                );
+            }
+        } catch (error) {
+            console.warn(`Cannot read ${USAGE_STATISTICS_FALLBACK_URL} (attempt ${attempt}): ${axiosErrorText(error)}`);
+            if (attempt < 3) {
+                await new Promise(resolve => setTimeout(resolve, 5_000));
+            }
+        }
+    }
+
+    if (!body) {
+        console.log('::error::No install statistics: count badges and "stat" are not updated in this run');
         return null;
     }
+
+    const stat = body;
+    Object.keys(stat.adapters).forEach(adapter => sources[adapter] && (sources[adapter].stat = stat.adapters[adapter]));
+
+    return stat;
 }
 
 function getLatestRepositoryFile(
